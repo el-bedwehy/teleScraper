@@ -3,6 +3,9 @@
 // @namespace    http://tampermonkey.net/
 // @version      0.2
 // @description  Scrape Telegram Web chats or channels from newest to oldest. Open the target conversation and click "Start Scrape". Use the export buttons to download JSON or CSV.
+=======
+// @version      0.2
+// @description  Scrape messages from Telegram web channels or chats. Open your desired chat and click "Start Scrape". Use the export buttons to download JSON or CSV.
 // @author       Anonymous
 // @match        https://web.telegram.org/*
 // @grant        GM_download
@@ -103,6 +106,7 @@
      * Identify the scrollable messages container element.
      * Returns the element or null if not found.
      */
+
 function getMessageContainer() {
     // Telegram Web typically uses a scrollable div with aria-label="Message list".
     // The selector below attempts to be resilient but may need adjustment if Telegram updates its DOM.
@@ -115,6 +119,12 @@ function getMessageContainer() {
      */
     function isInChat() {
         return Boolean(getMessageContainer());
+=======
+    function getMessageContainer() {
+        // Telegram Web typically uses a scrollable div with aria-label="Message list".
+        // The selector below attempts to be resilient but may need adjustment if Telegram updates its DOM.
+        return document.querySelector('div[aria-label="Message list"]');
+
     }
 
     /**
@@ -130,8 +140,11 @@ function getMessageContainer() {
         if (!nodes.length) {
             nodes = container.querySelectorAll('article');
         }
+
         // Process from bottom to top so array ends up ordered newest -> oldest
         Array.from(nodes).reverse().forEach(node => {
+=======
+        nodes.forEach(node => {
             try {
                 const id = node.getAttribute('data-id') || node.id || node.dataset.messageId;
                 if (!id || messageIds.has(id)) return;
@@ -200,17 +213,31 @@ function getMessageContainer() {
     async function scrapingLoop() {
         if (!scraping) return;
 
+
         // Scroll first to load older messages
         const loadedMore = await scrollUp().catch(err => { logError(err); return false; });
 
         // Extract any messages currently in the DOM (newest -> oldest)
+=======
+
         try {
             extractMessages();
         } catch (err) {
             logError(err);
         }
 
+
         ui.progress.textContent = `Scraped ${messages.length} messages`;
+
+=======
+        ui.progress.textContent = `Scraped ${messages.length} messages`;
+
+        let loadedMore = false;
+        try {
+            loadedMore = await scrollUp();
+        } catch (err) {
+            logError(err);
+        }
 
         if (!loadedMore) {
             // No more messages to load; stop
@@ -227,10 +254,13 @@ function getMessageContainer() {
     /** Start the scraping process */
     function startScraping() {
         if (scraping) return;
+
         if (!isInChat()) {
             alert('Please open a Telegram channel, community or group before scraping.');
             return;
         }
+=======
+
         messages = [];
         messageIds.clear();
         scrollDelay = parseInt(ui.delay.value, 10) || 1500;
@@ -284,5 +314,7 @@ function getMessageContainer() {
     // Catch unhandled errors
     window.addEventListener('error', (e) => logError(e.error || e.message));
     window.addEventListener('unhandledrejection', (e) => logError(e.reason));
+=======
+
 })();
 
